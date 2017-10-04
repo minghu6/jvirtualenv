@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+"""Supported by minghu6 package"""
 
 from subprocess import Popen, PIPE
 import codecs
@@ -8,6 +9,7 @@ import inspect
 import os
 
 
+# minghu6.algs.decorator.handle_exception
 def handle_excpetion(exception_handler, exception_classes):
     """
     An exception handling idiom using decorators
@@ -65,6 +67,7 @@ def get_locale_codec():
     return codecs.lookup(locale.getpreferredencoding()).name
 
 
+# minghu6.etc.cmd.exec_cmd
 def exec_cmd(cmd, shell=True):
     """
     only can be used in shell

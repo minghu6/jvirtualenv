@@ -5,7 +5,7 @@ jdk pattern: .*/java/jdk[^/]
 
 Usage:
   jvirtualenv list-tag [-g]
-  jvirtualenv --java=<tag> <project> [-g]
+  jvirtualenv --java=<tag> <project> [-g] [-f]
   jvirtualenv reinit-tag [-g]
 
 Options:
@@ -13,6 +13,7 @@ Options:
   -j --java=<tag>  point a jdk to use
   reinit-tag       reinit the java version config
   -g --global      global mode, need sudo
+  -f --force       force to create java virtual env in a existed folder
 
 """
 
@@ -28,7 +29,7 @@ from sh import locate
 from color import color
 from docopt import docopt
 
-from jvirtualenv.support.support_by_minghu6 import exec_cmd, handle_excpetion, chain_apply, path_to
+from jvirtualenv.support.minghu6_support import exec_cmd, handle_excpetion, chain_apply, path_to
 from jvirtualenv.template.activate_template import template as activate_template
 
 __version__ = '0.0.1'
@@ -162,8 +163,15 @@ def create_activate_s(virtual_env, java_home, java_tag, doc=activate_template):
     return chain_apply(funcs, doc)
 
 
-def write_activate_file(virtual_env, java_home, java_tag):
+def write_activate_file(virtual_env, java_home, java_tag, force=False):
     virtual_env = os.path.abspath(virtual_env)
+
+    if os.path.lexists(virtual_env) and not force:
+        color.print_warn('project diretory %s exists already\n'
+                         'you can use -f argument to continue.'%virtual_env)
+        return
+
+
     ensure_dir_exists(virtual_env)
 
     activate_dir = os.path.join(virtual_env, 'bin')
@@ -209,7 +217,7 @@ def cli():
         version_info = find_version(arguments['--java'])
 
         project_path = arguments['<project>']
-        write_activate_file(project_path, version_info['home'], version_info['tag'])
+        write_activate_file(project_path, version_info['home'], version_info['tag'], bool(arguments['--force']))
 
 
 if __name__ == '__main__':
