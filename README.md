@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/jvirtualenv.svg)](https://badge.fury.io/py/jvirtualenv)
 [![codebeat badge](https://codebeat.co/badges/7bd988f9-7f2c-4701-951e-92dfe16be5ab)](https://codebeat.co/projects/github-com-minghu6-jvirtualenv-master)
 # jvirtualenv
 A micro Java environment switch which reference `virtualenv`.
