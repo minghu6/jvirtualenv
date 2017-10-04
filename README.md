@@ -1,12 +1,12 @@
-#jvirtualenv
+# jvirtualenv
 A micro Java environment switch which reference `virtualenv`.
 
-##OS Supports:
+## OS Supports:
 Linux and any other OS whose shell is bash or zsh.
 
 Windows support is a TBD (low priority though).
 
-##Requirements:
+## Requirements:
 1. JDK should be placed on a folder whose name is `java`
 and its name should startswith `jdk`.
 
@@ -16,7 +16,7 @@ and its name should startswith `jdk`.
     
 2. Python3
     
-##Usage:
+## Usage:
 
 1. `pip3 install jvirtualenv`
 2. `jvirtualenv list-tag` (view all jdk tag)
