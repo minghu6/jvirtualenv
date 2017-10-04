@@ -1,0 +1,4 @@
+docopt
+color-print==0.0.2
+sh
+
