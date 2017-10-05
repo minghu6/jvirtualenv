@@ -26,6 +26,7 @@ from collections import OrderedDict
 from functools import partial
 
 from sh import locate
+import sh
 from color import color
 from docopt import docopt
 
@@ -67,13 +68,18 @@ def get_java_version(java_path='java'):
         version = LooseVersion(version_s)
 
         match = re.match(r'\d+', re.split(r'\s+', err[2])[2])
-        bit = match.group(0)
+        if match is None:
+            bit = '32'
+        else:
+            bit = match.group(0)
+
     except Exception as ex:
         raise GetJavaVersionFailedError from ex
 
     return version, bit
 
 
+@handle_excpetion(lambda ex: [], sh.ErrorReturnCode_1)  # return code 1 means locate result is empty.
 def build_version_infos():
     version_infos = []
 
@@ -148,6 +154,9 @@ def pretty_print_config(version_infos):
         color.print_info()
         color.print_info('-'*80)
 
+    if not version_infos:
+        color.print_warn('empty')
+
 
 def find_version(tag: str):
     for version_info in get_config():
@@ -215,6 +224,9 @@ def cli():
 
     elif arguments['--java']:
         version_info = find_version(arguments['--java'])
+        if version_info is None:
+            color.print_err('No matched tag')
+            return
 
         project_path = arguments['<project>']
         write_activate_file(project_path, version_info['home'], version_info['tag'], bool(arguments['--force']))
