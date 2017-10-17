@@ -26,6 +26,7 @@ from collections import OrderedDict
 from functools import partial
 
 from sh import locate
+from sh import updatedb
 import sh
 from color import color
 from docopt import docopt
@@ -219,6 +220,9 @@ def cli():
         pretty_print_config(get_config())
 
     elif arguments['reinit-tag']:
+        with sh.contrib.sudo:
+            updatedb("/root")
+
         init_config()
         color.print_ok('reinit config in %s'%VERSION_JSON_PATH)
 
