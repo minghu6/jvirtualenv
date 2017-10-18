@@ -26,6 +26,7 @@ from collections import OrderedDict
 from functools import partial
 
 from sh import locate
+from sh import updatedb
 import sh
 from color import color
 from docopt import docopt
@@ -33,7 +34,9 @@ from docopt import docopt
 from jvirtualenv.support.minghu6_support import exec_cmd, handle_excpetion, chain_apply, path_to
 from jvirtualenv.template.activate_template import template as activate_template
 
-__version__ = '0.0.2'
+
+__version__ = '0.0.3'
+
 JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
 
 
@@ -219,6 +222,9 @@ def cli():
         pretty_print_config(get_config())
 
     elif arguments['reinit-tag']:
+        with sh.contrib.sudo:
+            updatedb()
+
         init_config()
         color.print_ok('reinit config in %s'%VERSION_JSON_PATH)
 
