@@ -34,7 +34,9 @@ from docopt import docopt
 from jvirtualenv.support.minghu6_support import exec_cmd, handle_excpetion, chain_apply, path_to
 from jvirtualenv.template.activate_template import template as activate_template
 
+
 __version__ = '0.0.3'
+
 JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
 
 
