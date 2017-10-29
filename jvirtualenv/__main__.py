@@ -217,12 +217,28 @@ def find_version(tag: str):
             return version_info
 
 
-def create_activate_s(virtual_env, java_home, java_tag, doc=activate_template):
-    funcs = [partial(re.sub, '"__VIRTUAL_ENV__"', '"%s"' % virtual_env),
-             partial(re.sub, '"__JAVA_HOME__"', '"%s"' % java_home),
-             partial(re.sub, '"__JAVA_TAG__"', '"%s"' % java_tag)]
+def create_activate_s(virtual_env, java_home, java_tag):
+    if iswin():
+        from jvirtualenv.template.activate_template_bat import template
+        if java_tag.startswith('1'):
+            class_path = '.:%JAVA_HOME%\\lib\\dt.jar;%JAVA_HOME%\\lib\\tools.jar'
+        else:
+            class_path = '.'
+        funcs = [
+            partial(re.sub, '"__VIRTUAL_ENV__"', '"%s"' % virtual_env.encode('unicode_escape').decode()),
+            partial(re.sub, '"__JAVA_HOME__"', '"%s"' % java_home.encode('unicode_escape').decode()),
+            partial(re.sub, '"__JAVA_TAG__"', '"%s"' % java_tag),
+            partial(re.sub, '"__CLASSPATH__"', '"%s"' % class_path.encode('unicode_escape').decode())
+        ]
+    else:
+        from jvirtualenv.template.activate_template import template
+        funcs = [
+            partial(re.sub, '"__VIRTUAL_ENV__"', '"%s"' % virtual_env),
+            partial(re.sub, '"__JAVA_HOME__"', '"%s"' % java_home),
+            partial(re.sub, '"__JAVA_TAG__"', '"%s"' % java_tag)
+        ]
 
-    return chain_apply(funcs, doc)
+    return chain_apply(funcs, template)
 
 
 def write_activate_file(virtual_env, java_home, java_tag, force=False):
@@ -238,14 +254,28 @@ def write_activate_file(virtual_env, java_home, java_tag, force=False):
     activate_dir = os.path.join(virtual_env, 'bin')
     ensure_dir_exists(os.path.join(activate_dir))
 
-    activate_path = os.path.join(activate_dir, 'activate')
+    if iswin():
+        activate_path = os.path.join(activate_dir, 'activate.bat')
+        deactivate_path = os.path.join(activate_dir, 'deactivate.bat')
 
-    with open(activate_path, 'w') as fw:
-        fw.write(create_activate_s(virtual_env, java_home, java_tag))
+        with open(activate_path, 'w') as fw_activate, open(deactivate_path, 'w') as fw_deactivate:
+            fw_activate.write(create_activate_s(virtual_env, java_home, java_tag))
 
-    color.print_info('create active file {0}'.format(activate_path))
+            from jvirtualenv.template.deactivate_template_bat import template
+            fw_deactivate.write(template)
+        
+        color.print_info('create active file {0}'.format(activate_path))
+        color.print_info('run "{0}" to activate it'.format(activate_path))
+        color.print_info('run "{0}" to deactivate it'.format(deactivate_path))
 
-    color.print_info('run `source {0}` to activate it'.format(path_to(os.curdir, activate_path)))
+    else:
+        activate_path = os.path.join(activate_dir, 'activate')
+
+        with open(activate_path, 'w') as fw:
+            fw.write(create_activate_s(virtual_env, java_home, java_tag))
+
+        color.print_info('create active file {0}'.format(activate_path))
+        color.print_info('run `source {0}` to activate it'.format(path_to(os.curdir, activate_path)))
 
 
 @handle_excpetion(handle_directory_conflict, DirectoryConflictError)
