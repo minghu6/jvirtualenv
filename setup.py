@@ -47,7 +47,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
-        'Operating System :: POSIX',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: Implementation :: CPython',
     ],

@@ -35,7 +35,7 @@ from jvirtualenv.support.minghu6_support import exec_cmd, handle_excpetion, chai
 from jvirtualenv.template.activate_template import template as activate_template
 
 
-__version__ = '0.0.3'
+__version__ = '0.1.0'
 
 JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
 
