@@ -1,7 +1,10 @@
 # -*- coding:utf-8 -*-
 """Java Virtual Env
 virtualenv for java JDK
-jdk pattern: .*/java/jdk[^/]
+
+jdk pattern:
+  POSIX:  .*/java/jdk[^/]
+  Windows: Program Files, Program Files (x86), ProgramData and current directory
 
 Usage:
   jvirtualenv list-tag [-g]
@@ -12,7 +15,7 @@ Options:
   list-tag         list all the optional tag
   -j --java=<tag>  point a jdk to use
   reinit-tag       reinit the java version config
-  -g --global      global mode, need sudo
+  -g --global      global mode, maybe need sudo
   -f --force       force to create java virtual env in a existed folder
 
 """
@@ -27,7 +30,6 @@ from docopt import docopt
 
 from jvirtualenv.support.minghu6_support import *
 from jvirtualenv.support.minghu6_support import iswin
-from jvirtualenv.template.activate_template import template as activate_template
 
 
 if not iswin():
@@ -88,7 +90,11 @@ def get_java_version(java_path='java'):
 
 
 def isjdk(java_path):
-    javac_path = os.path.join(os.path.dirname(java_path), 'javac.exe')
+    if iswin():
+        javac_path = os.path.join(os.path.dirname(java_path), 'javac.exe')
+    else:
+        javac_path = os.path.join(os.path.dirname(java_path), 'javac')
+
     return os.path.isfile(javac_path)
 
 
@@ -141,7 +147,8 @@ def build_version_infos():
                     version_infos.append(version_info)
     
     else:
-        for item in sh.locate('java'):
+        JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
+        for item in sh.locate('-A', '-r', JAVA_PATTERN):
             java_path = item.__str__().strip()
 
             try:
