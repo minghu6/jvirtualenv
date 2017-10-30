@@ -1,12 +1,16 @@
 # -*- coding:utf-8 -*-
 """Supported by minghu6 package"""
 
+from threading import Thread
 from subprocess import Popen, PIPE
 import codecs
 import locale
+import platform
+import ctypes
 from functools import partial
 import inspect
 import os
+import sys
 
 
 # minghu6.algs.decorator.handle_exception
@@ -79,7 +83,6 @@ def exec_cmd(cmd, shell=True):
     p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=shell)
 
     stdout_data, stderr_data = p.communicate()
-    p.wait()
 
     codec = get_locale_codec()
 
@@ -124,7 +127,7 @@ def path_level(path):
     return _path_level(path)
 
 
-def path_to(from_path:str, to_path:str):
+def path_to(from_path: str, to_path: str):
     """
     >>> path_to('/home/john/coding', '/home/alice/Download')
     '../../alice/Download'
@@ -145,3 +148,107 @@ def path_to(from_path:str, to_path:str):
         target_path = os.curdir + to_extra_path
 
     return target_path
+
+
+def get_home_dir():
+    return os.path.expanduser('~')
+
+
+def iswin():
+    return platform.platform().upper().startswith('WIN')
+
+
+def get_drivers():
+    if not iswin():
+        raise OSError('only support in Windows')
+    
+    lp_buffer = ctypes.create_string_buffer(78)
+    ctypes.windll.kernel32.GetLogicalDriveStringsA(ctypes.sizeof(lp_buffer), lp_buffer)
+    drivers = lp_buffer.raw.split(b'\x00')
+    
+    return [each_driver.decode()[:2] for each_driver in drivers if each_driver and os.path.isdir(each_driver)]
+
+
+try:
+    from Queue import Queue, Empty
+except ImportError:
+    from queue import Queue, Empty  # python 3.x
+
+
+class CommandRunner(object):
+    """Inspired by https://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python"""
+    ON_POSIX = 'posix' in sys.builtin_module_names
+    
+    @classmethod
+    def _enqueue_output(cls, process, out, queue):
+        for line in iter(out.readline, b''):
+            queue.put(line)
+        
+        process.terminate()
+    
+    @classmethod
+    def run(cls, cmd):
+        
+        p = Popen('{cmd} && exit'.format(cmd=cmd), stdout=PIPE, stderr=PIPE, bufsize=1,
+                  close_fds=CommandRunner.ON_POSIX, shell=True)
+        q = Queue()
+        t_stdout = Thread(target=CommandRunner._enqueue_output, name='{cmd} fetch stdout'.format(cmd=cmd),
+                          args=(p, p.stdout, q), daemon=True)
+        t_stderr = Thread(target=CommandRunner._enqueue_output, name='{cmd} fetch stderr'.format(cmd=cmd),
+                          args=(p, p.stderr, q), daemon=True)
+        
+        t_stdout.start()
+        t_stderr.start()
+        
+        # read line without blocking
+        codec = get_locale_codec()
+        while p.returncode is None:
+            try:
+                line = q.get(timeout=.1)
+                line = line.strip().decode(codec, errors='ignore')
+            except Empty:
+                pass
+            else:  # got line
+                yield line
+
+
+def isiterable(obj, but_str_bytes=True):
+    """
+    :param obj:
+    :param but_str_bytes: most of time, we don't need str and bytes
+    :return:
+    """
+    from collections import Iterable
+    if but_str_bytes and isinstance(obj, (str, bytes, bytearray)):
+        return False
+    else:
+        return isinstance(obj, Iterable)
+
+
+def find_wrapper(start_dir, pattern):
+    if not isiterable(pattern):
+        pattern = [pattern]
+    
+    command_runner = CommandRunner()
+    if iswin():
+        cmd = 'where /R "{start_dir}" {pattern}'.format(start_dir=start_dir, pattern=' '.join(pattern))
+    else:
+        cmd = 'find {start_dir} {pattern}'.format(
+            start_dir=start_dir,
+            pattern=' '.join(['-name "%s"' % each_pattern for each_pattern in pattern])
+        )
+    
+    for line in command_runner.run(cmd):
+        if os.path.exists(line):
+            yield line
+
+
+def get_drivers():
+    if not iswin():
+        raise OSError('only support in Windows')
+    
+    lp_buffer = ctypes.create_string_buffer(78)
+    ctypes.windll.kernel32.GetLogicalDriveStringsA(ctypes.sizeof(lp_buffer), lp_buffer)
+    drivers = lp_buffer.raw.split(b'\x00')
+    
+    return [each_driver.decode()[:2] for each_driver in drivers if each_driver and os.path.isdir(each_driver)]
