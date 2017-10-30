@@ -36,7 +36,7 @@ if not iswin():
     import sh
 
 
-__version__ = '0.0.3'
+__version__ = '0.1.0'
 
 
 class GetVersionFailedError(Exception):
