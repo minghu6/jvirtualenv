@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-template="""
+template = """
 # This file must be used with "source bin/activate" *from bash*
 # you cannot run it directly
 
