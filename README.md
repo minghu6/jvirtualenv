@@ -6,7 +6,7 @@ A micro Java environment switch which inspired by `virtualenv`.
 ## OS Supports:
 Linux and any other OS whose shell is bash or zsh.
 
-Windows support is a TBD (low priority though).
+Windows.
 
 ## Requirements:
 1. JDK(*Oracle JDK*) should be placed on a folder whose name is `java`
