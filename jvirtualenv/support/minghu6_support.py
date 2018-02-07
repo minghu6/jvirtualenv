@@ -129,18 +129,30 @@ def path_level(path):
 
 def path_to(from_path: str, to_path: str):
     """
+    Warning: this function is OS dependent
+
     >>> path_to('/home/john/coding', '/home/alice/Download')
     '../../alice/Download'
+    >>> path_to('/home/john/coding', '/home/john/coding/tmp')
+    './tmp'
+    >>> try:
+    ...     path_to('d:\\abc', 'c:\\abc\\def')
+    ... except ValueError as ex:
+    ...     print(ex)
+    Paths don't have the same drive
     """
     from_path = os.path.abspath(from_path)
     to_path = os.path.abspath(to_path)
 
-    common_path = os.path.commonpath([from_path, to_path])
+    if iswin() and os.path.splitdrive(from_path) != os.path.splitdrive(to_path):
+        return to_path
+    else:
+        common_path = os.path.commonpath([from_path, to_path])
 
     from_extra_path = from_path.split(common_path)[1]
     to_extra_path = to_path.split(common_path)[1]
 
-    parpath = os.sep.join([os.pardir] * path_level(from_extra_path))
+    parpath = os.path.sep.join([os.pardir] * path_level(from_extra_path))
 
     if parpath:
         target_path = parpath + to_extra_path
@@ -185,6 +197,7 @@ class CommandRunner(object):
             queue.put(line)
         
         process.terminate()
+        process.poll()
     
     @classmethod
     def run(cls, cmd):
