@@ -12,7 +12,7 @@ Usage:
   jvirtualenv reinit-tag [-g]
 
 Options:
-  list-tag         list all the optional tag
+  list-tag         list all the optional tag (init if not exists)
   -j --java=<tag>  point a jdk to use
   reinit-tag       reinit the java version config
   -g --global      global mode, maybe need sudo
@@ -56,6 +56,11 @@ class DirectoryConflictError(Exception):
     pass
 
 
+class JavaNotFoundError(FileNotFoundError):
+    """There should be at least one Java installation!"""
+    pass
+
+
 def _step_parent_dir(path, n=1):
     if n > 0:
         n -= 1
@@ -74,14 +79,16 @@ def get_java_version(java_path='java'):
     _, err = exec_cmd(cmd)  # It's confused that java -version output-stream is stderr other than stdout
 
     try:
-        version_s = re.split(r'\s+', err[0])[-1][1:-1]
+        tokens_l1 = re.split(r'\s+', err[0])
+        ind_pv = tokens_l1.index('version')  # raise ValueError if value isn't exists
+        version_s = tokens_l1[ind_pv + 1][1:-1]  # raise IndexError
+
         version = LooseVersion(version_s)
 
-        match = re.match(r'\d+', re.split(r'\s+', err[2])[2])
-        if match is None:
-            bit = '32'
-        else:
+        if match := re.search(r'\b\d+(?=-Bit)\b', err[2]):
             bit = match.group(0)
+        else:
+            bit = '32'
 
     except Exception as ex:
         raise GetJavaVersionFailedError from ex
@@ -101,22 +108,19 @@ def isjdk(java_path):
 def _build_version_info(java_path):
     if not isjdk(java_path):
         raise NotBelongToJDKError
-    
+
     try:
         version, bit = get_java_version(java_path)
     except GetJavaVersionFailedError as ex:
         raise NotBelongToJDKError from ex
 
     version_info = OrderedDict()
-    if version.version[0] == 9:
-        version_info['tag'] = version.vstring
-    else:
-        version_info['tag'] = '{0}.{1}:{2}:{3}'.format(*version.version[:3], bit)
-    
+
+    version_info['tag'] = '{0}:{1}:{2}:{3}'.format(*version.version[:3], bit)
     version_info['version'] = version
     version_info['bit'] = bit
     version_info['home'] = _step_parent_dir(java_path, 2)
-    
+
     return version_info
 
 
@@ -145,19 +149,28 @@ def build_version_infos():
                 else:
                     color.print_info('')
                     version_infos.append(version_info)
-    
-    else:
-        JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
-        for item in sh.locate('-A', '-r', JAVA_PATTERN):
-            java_path = item.__str__().strip()
 
-            try:
-                version_info = _build_version_info(java_path)
-            except NotBelongToJDKError:
-                pass
+    else:
+        try:
+            JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
+            java_path_coll = sh.locate('-A', '-r', JAVA_PATTERN)
+        except sh.ErrorReturnCode_1:  # `locate` returns empty
+            if env_java_path := sh.which('java'):  # add java path from env
+                java_path_coll = [env_java_path]
             else:
-                color.print_info('')
-                version_infos.append(version_info)
+                raise JavaNotFoundError from sh.ErrorReturnCode_1
+        finally:
+            for item in java_path_coll:
+                java_path = item.__str__().strip()
+
+                try:
+                    version_info = _build_version_info(java_path)
+                except NotBelongToJDKError:
+                    pass
+                else:
+                    color.print_info('')
+                    version_infos.append(version_info)
+
 
     return version_infos
 
@@ -270,7 +283,7 @@ def write_activate_file(virtual_env, java_home, java_tag, force=False):
 
             from jvirtualenv.template.deactivate_template_bat import template
             fw_deactivate.write(template)
-        
+
         color.print_info('create active file {0}'.format(activate_path))
         color.print_info('run "{0}" to activate it'.format(activate_path))
         color.print_info('run "{0}" to deactivate it'.format(deactivate_path))
@@ -301,10 +314,10 @@ def cli():
             CONFIG_DIR = os.path.join(os.path.dirname(get_home_dir()), 'All Users', '.jvirtualenv.d')
         else:
             CONFIG_DIR = '/etc/jvirtualenv.d'
-            
+
     else:
         CONFIG_DIR = os.path.join(get_home_dir(), '.jvirtualenv.d')
-    
+
     TAG_LIST_CONFIG_PATH = os.path.join(CONFIG_DIR, 'tag-list.json')
     SEARCH_PATTERN_CONFIG_PATH = os.path.join(CONFIG_DIR, 'search-pattern.json')
 
@@ -314,10 +327,12 @@ def cli():
     elif arguments['reinit-tag']:
         if not iswin():
             with sh.contrib.sudo:
+                color.print_normal("updatedb...")
                 sh.updatedb()
 
         init_config()
         color.print_ok('reinit config in %s' % TAG_LIST_CONFIG_PATH)
+        pretty_print_config(get_config())
 
     elif arguments['--java']:
         version_info = find_version(arguments['--java'])
