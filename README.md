@@ -24,30 +24,30 @@ Windows.
 * **Other**
 
     you can run the jvirtualenv in the parent directory of JDK.
-    
+
     Or edit the config file directly. (not recommented)
-    
+
     The config file should be as followed:
     ```
     [
         {
-            "tag": "9",
-            "version": "9",
+            "tag": "14.0:2:64",
+            "version": "14.0.2",
             "bit": "64",
             "home": "/opt/java/jdk-9"
         },
         {
-            "tag": "1.8:0:64",
+            "tag": "1:8:0:32",
             "version": "1.8.0_144",
             "bit": "32",
             "home": "/opt/java/jdk1.8.0_144"
         }
    ]
-   
+
     ```
-    
+
 ### 2. Python3
-    
+
 ## Usage:
 
 1. `pip3 install jvirtualenv`
