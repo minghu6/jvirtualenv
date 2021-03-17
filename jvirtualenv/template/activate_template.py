@@ -77,16 +77,11 @@ fi
 JAVA_TAG="__JAVA_TAG__"
 export JAVA_TAG
 
-# unset CLASSPATH if set
+# inherit from old CLASSPATH
 if ! [ -z "${CLASSPATH+_}" ] ; then
     _OLD_VIRTUAL_CLASSPATH="$CLASSPATH"
-    unset CLASSPATH
-fi
-# set new CLASSPATH
-if [ "$JAVA_TAG" != "9" ] ; then
-    CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
 else
-    CLASSPATH=.
+    CLASSPATH="__CLASSPATH__"
 fi
 export CLASSPATH
 
