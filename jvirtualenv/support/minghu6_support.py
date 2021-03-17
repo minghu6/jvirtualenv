@@ -102,6 +102,7 @@ def exec_cmd(cmd, shell=True):
 
 def chain_apply(funcs, var):
     """apply func from funcs[0] to funcs[-1]"""
+    # there isn't block scope in python
     for func in funcs:
         var = func(var)
 
@@ -173,11 +174,11 @@ def iswin():
 def get_drivers():
     if not iswin():
         raise OSError('only support in Windows')
-    
+
     lp_buffer = ctypes.create_string_buffer(78)
     ctypes.windll.kernel32.GetLogicalDriveStringsA(ctypes.sizeof(lp_buffer), lp_buffer)
     drivers = lp_buffer.raw.split(b'\x00')
-    
+
     return [each_driver.decode()[:2] for each_driver in drivers if each_driver and os.path.isdir(each_driver)]
 
 
@@ -190,18 +191,18 @@ except ImportError:
 class CommandRunner(object):
     """Inspired by https://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python"""
     ON_POSIX = 'posix' in sys.builtin_module_names
-    
+
     @classmethod
     def _enqueue_output(cls, process, out, queue):
         for line in iter(out.readline, b''):
             queue.put(line)
-        
+
         process.terminate()
         process.poll()
-    
+
     @classmethod
     def run(cls, cmd):
-        
+
         p = Popen('{cmd} && exit'.format(cmd=cmd), stdout=PIPE, stderr=PIPE, bufsize=1,
                   close_fds=CommandRunner.ON_POSIX, shell=True)
         q = Queue()
@@ -209,10 +210,10 @@ class CommandRunner(object):
                           args=(p, p.stdout, q), daemon=True)
         t_stderr = Thread(target=CommandRunner._enqueue_output, name='{cmd} fetch stderr'.format(cmd=cmd),
                           args=(p, p.stderr, q), daemon=True)
-        
+
         t_stdout.start()
         t_stderr.start()
-        
+
         # read line without blocking
         codec = get_locale_codec()
         while p.returncode is None:
@@ -241,7 +242,7 @@ def isiterable(obj, but_str_bytes=True):
 def find_wrapper(start_dir, pattern):
     if not isiterable(pattern):
         pattern = [pattern]
-    
+
     command_runner = CommandRunner()
     if iswin():
         cmd = 'where /R "{start_dir}" {pattern}'.format(start_dir=start_dir, pattern=' '.join(pattern))
@@ -250,7 +251,7 @@ def find_wrapper(start_dir, pattern):
             start_dir=start_dir,
             pattern=' '.join(['-name "%s"' % each_pattern for each_pattern in pattern])
         )
-    
+
     for line in command_runner.run(cmd):
         if os.path.exists(line):
             yield line
@@ -259,9 +260,9 @@ def find_wrapper(start_dir, pattern):
 def get_drivers():
     if not iswin():
         raise OSError('only support in Windows')
-    
+
     lp_buffer = ctypes.create_string_buffer(78)
     ctypes.windll.kernel32.GetLogicalDriveStringsA(ctypes.sizeof(lp_buffer), lp_buffer)
     drivers = lp_buffer.raw.split(b'\x00')
-    
+
     return [each_driver.decode()[:2] for each_driver in drivers if each_driver and os.path.isdir(each_driver)]

@@ -96,17 +96,24 @@ def get_java_version(java_path='java'):
     return version, bit
 
 
-def isjdk(java_path):
-    if iswin():
-        javac_path = os.path.join(os.path.dirname(java_path), 'javac.exe')
-    else:
-        javac_path = os.path.join(os.path.dirname(java_path), 'javac')
+def isstdjdk(java_path):
+    # sibling guarantee: [javac]
+    def there_is_javac(java_path):
+        if iswin():
+            javac_path = os.path.join(os.path.dirname(java_path), 'javac.exe')
+        else:
+            javac_path = os.path.join(os.path.dirname(java_path), 'javac')
 
-    return os.path.isfile(javac_path)
+        return os.path.isfile(javac_path)
+
+    # parent guarantee
+    parent_is_bin = lambda java_path: os.path.basename(os.path.dirname(java_path)) == 'bin'
+
+    return all(map(lambda f: f(java_path), [there_is_javac, parent_is_bin]))
 
 
 def _build_version_info(java_path):
-    if not isjdk(java_path):
+    if not isstdjdk(java_path):
         raise NotBelongToJDKError
 
     try:
@@ -240,10 +247,14 @@ def find_version(tag: str):
 def create_activate_s(virtual_env, java_home, java_tag):
     if iswin():
         from jvirtualenv.template.activate_template_bat import template
+
+        global_class_path = os.environ.get('CLASSPATH', '')
         if java_tag.startswith('1'):
-            class_path = '.:%JAVA_HOME%\\lib\\dt.jar;%JAVA_HOME%\\lib\\tools.jar'
+            class_path = '.;%JAVA_HOME%\\lib\\dt.jar;%JAVA_HOME%\\lib\\tools.jar'
         else:
-            class_path = '.'
+            class_path = '.;%JAVA_HOME%\\lib\\jrt-fs.jar'
+        class_path = ';'.join([class_path, global_class_path])
+
         funcs = [
             partial(re.sub, '"__VIRTUAL_ENV__"', '"%s"' % virtual_env.encode('unicode_escape').decode()),
             partial(re.sub, '"__JAVA_HOME__"', '"%s"' % java_home.encode('unicode_escape').decode()),
@@ -252,10 +263,19 @@ def create_activate_s(virtual_env, java_home, java_tag):
         ]
     else:
         from jvirtualenv.template.activate_template import template
+
+        global_class_path = os.environ.get('CLASSPATH', '')
+        if java_tag.startswith('1'):
+            class_path = '.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar'
+        else:
+            class_path = '.:$JAVA_HOME/lib/jrt-fs.jar'
+        class_path = ':'.join([class_path, global_class_path])
+
         funcs = [
             partial(re.sub, '"__VIRTUAL_ENV__"', '"%s"' % virtual_env),
             partial(re.sub, '"__JAVA_HOME__"', '"%s"' % java_home),
-            partial(re.sub, '"__JAVA_TAG__"', '"%s"' % java_tag)
+            partial(re.sub, '"__JAVA_TAG__"', '"%s"' % java_tag),
+            partial(re.sub, '"__CLASSPATH__"', '"%s"' % class_path)
         ]
 
     return chain_apply(funcs, template)
