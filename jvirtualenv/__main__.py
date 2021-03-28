@@ -24,12 +24,12 @@ import re
 from distutils.version import LooseVersion
 import json
 from collections import OrderedDict
+from typing import Tuple
 
 from color import color
 from docopt import docopt
 
 from jvirtualenv.support.minghu6_support import *
-from jvirtualenv.support.minghu6_support import iswin
 
 
 if not iswin():
@@ -70,7 +70,7 @@ def _step_parent_dir(path, n=1):
     return path
 
 
-def get_java_version(java_path='java'):
+def get_java_version(java_path='java') -> Tuple[LooseVersion, int]:
     if iswin():
         cmd = '"{0}" -version'.format(java_path)
     else:
@@ -84,6 +84,7 @@ def get_java_version(java_path='java'):
         version_s = tokens_l1[ind_pv + 1][1:-1]  # raise IndexError
 
         version = LooseVersion(version_s)
+        version.version = [getone(version.version, i, 0) for i in range(3)]
 
         if match := re.search(r'\b\d+(?=-Bit)\b', err[2]):
             bit = match.group(0)
@@ -159,7 +160,7 @@ def build_version_infos():
 
     else:
         try:
-            JAVA_PATTERN = '^.*/java/jdk[^/]*/bin/java$'
+            JAVA_PATTERN = '^.*/jdk[^/]*/bin/java$'
             java_path_coll = sh.locate('-A', '-r', JAVA_PATTERN)
         except sh.ErrorReturnCode_1:  # `locate` returns empty
             if env_java_path := sh.which('java'):  # add java path from env
@@ -172,6 +173,7 @@ def build_version_infos():
 
                 try:
                     version_info = _build_version_info(java_path)
+                    print(version_info)
                 except NotBelongToJDKError:
                     pass
                 else:

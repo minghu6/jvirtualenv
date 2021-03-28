@@ -257,12 +257,9 @@ def find_wrapper(start_dir, pattern):
             yield line
 
 
-def get_drivers():
-    if not iswin():
-        raise OSError('only support in Windows')
-
-    lp_buffer = ctypes.create_string_buffer(78)
-    ctypes.windll.kernel32.GetLogicalDriveStringsA(ctypes.sizeof(lp_buffer), lp_buffer)
-    drivers = lp_buffer.raw.split(b'\x00')
-
-    return [each_driver.decode()[:2] for each_driver in drivers if each_driver and os.path.isdir(each_driver)]
+def getone(l, i, default = None):
+    try:
+        ret = l[i]
+    except (IndexError, KeyError, TypeError):
+        ret = default
+    return ret
